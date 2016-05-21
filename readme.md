@@ -1,28 +1,71 @@
-What is a good way to publish your es2015 package for use in node 4, node 5, node 6, browser and other environments?
+> I am a javascript developer and I want to write a Node.js package using ECMAScript 2015 features. Users of the package require it to be available for both Node.js and the browser. 
 
-So far I've seen two approaches:
+# Choosing an approach
 
-1. building your package for all elegible target platforms you can think of and
-2. building your package at installation time for the node version being used (and optionally providing a separate build for browsers). 
+This section contains possible approaches and their up- and downsides. 
 
-Downsides of approach 1 are:
+## Approaches
 
-1. forgetting to compile for some environment and
-2. having everyone download a lot of code that is not even used (or requiring users to select the right version).
+### Approach **A#1**: Install-time build.
 
-Downsides of approach 2 are:
+In the case of Node.js, build the package as it is installed based on the Node.js version. 
 
-1. postinstall has a bad reputation,
-2. it requires users to download all development dependencies, 
-3. automatic version detection might fail and
-4. if node is upgraded the packages won't be automatically rebuilt. 
+### Approach **A#2**: Run-time build.
 
-Especially the last downside of approach 2 can create nasty, difficult to find, problems. I think we should go with approach 1 despite its downsides. 
+Build the package on the fly based on the environment. 
 
-Providing different versions of your package for all platforms can be done in a number of ways:
+### Approach **A#3**: Publish-time build.
 
-1. create build folders for all environments in your package as was done in this example. 
-2. create and maintain multiple packages: my-package-node-4, my-package-node-5 and so on..
-3. create and maintain multiple distribution tags and versions: provide tags like `my-package@latest-node4`, `my-package@latest-node5` and publish versions like `2.1.5-node4`, `2.1.5-node5` according to [semver](http://semver.org/). 
+Build the package for all elegible target platforms. 
 
-Perhaps method 3 is the neatest one, but it is more error prone for the developer and requires some explanation to the users of the package. It is the neatest one because it doesn't flood the npm registry and it doesn't force the user to download multiple versions of the same code of which most aren't even used. 
+## Features
+
+The table below summarizes the advantages and disadvantages of each approach. 
+
+|Code|Feature|Category|**A#1**|**A#2**|**A#3**|
+|:---:|---|---|:---:|:---:|:---:|
+|**F#1**|Automatic version selection.                                   |Usability         |✔|✔|_|
+|**F#2**|Automatic version selection cannot fail.                       |Unexpected Error  |✘|✔|✔|
+|**F#3**|No need to build for all possible platforms.                   |Development Effort|✔|✔|✘|
+|**F#4**|No need to build package while running.                        |Operating Speed   |✔|✘|✔|
+|**F#5**|No need to download development dependencies.                  |Installation Speed|✘|✘|✔|
+|**F#6**|Package will not suddenly fail after changing Node.js versions.|Unexpected Error  |✘|✔|✔|
+|**F#7**|Approach applies to browser environments.                        |Applicability     |✘|✔|✔|
+
+## Conclusion
+
+Feature **F#7** rules out **A#1** because almost all packages need to be available in the browser. Feature **F#4** rules out **A#2** because the increased start-up time is almost never worth it. 
+
+This leaves approach **A#3** which might satisfy **F#1** and does not satisfy features **F#3**. Users will need to select the right version of your package according to their platform or the package can `require` the right version based on the Node.js version. The developer will need to determine the most common platforms on which the package will be used and build the package for those platforms.
+
+# A method for approach **A#3**
+
+Approach **A#3** gives rise to the following question: 
+
+> How do we provide builds of the same version of a package?
+
+## Methods
+
+### Method **M#1**: Single package.
+
+Create a single package that contains built versions for all platforms.
+
+### Method **M#2**: Multiple packages.
+
+Create a package for each platform
+
+### ~~Method **M#3**~~: Multiple distribution tags.
+
+Unfortunately, npm does not do anything with semver's build information. If a version is specified like this: `x.x.x-prerelease+buildinfo`, npm drops the `buildinfo`. It would be nice if we could have version specifications like `^3.1.4+node4` which would install version `3.2.2+node4` but not `3.2.2`. 
+
+## Features
+
+|Code|Feature|**M#1**|**M#2**|
+|:---:|---|:---:|:---:|
+|**F#8**|Single package.|✔|✘|
+|**F#9**|Download single version.|✘|✔|
+|**F#10**|Optional automatic version selection.|✔|✘|
+
+## Conclusion
+
+This is where you come in? How do we select the right method? Are there more options? How do we actually realize this? Maintain multiple git branches for each platform and pull changes in each of them everytime a version is released, or do we generate an entire platform specific package from the source package?
